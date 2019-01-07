@@ -3,6 +3,7 @@ from gym import spaces
 from gym.envs.registration import EnvSpec
 import numpy as np
 from multiagent.multi_discrete import MultiDiscrete
+import math
 
 # environment for all agents in the multiagent world
 # currently code assumes that no agents will be created/destroyed at runtime!
@@ -228,8 +229,10 @@ class MultiAgentEnv(gym.Env):
             self.render_geoms = []
             self.render_geoms_xform = []
             for entity in self.world.entities:
-                geom = rendering.make_circle(entity.size)
-                xform = rendering.Transform()
+                #geom = rendering.make_circle_with_arrow(radius= entity.size,p_pos=entity.state.p_pos,filled=False)
+                geom = rendering.make_circle(entity.size,entity.state.p_pos,filled=True)
+                xform = rendering.Transform() # 6 entities 
+               
                 if 'agent' in entity.name:
                     geom.set_color(*entity.color, alpha=0.5)
                 else:
@@ -237,7 +240,7 @@ class MultiAgentEnv(gym.Env):
                 geom.add_attr(xform)
                 self.render_geoms.append(geom)
                 self.render_geoms_xform.append(xform)
-
+        
             # add geoms to viewer
             for viewer in self.viewers:
                 viewer.geoms = []
@@ -253,10 +256,20 @@ class MultiAgentEnv(gym.Env):
                 pos = np.zeros(self.world.dim_p)
             else:
                 pos = self.agents[i].state.p_pos
-            self.viewers[i].set_bounds(pos[0]-cam_range,pos[0]+cam_range,pos[1]-cam_range,pos[1]+cam_range)
+            self.viewers[i].set_bounds(pos[0]-cam_range,pos[0]+cam_range,pos[1]-cam_range,pos[1]+cam_range,
+            )
             # update geometry positions
             for e, entity in enumerate(self.world.entities):
+                if(e<3):
+                    v_angle = np.arctan2(entity.state.p_vel[1],entity.state.p_vel[0])
+                    self.render_geoms_xform[e].set_rotation(v_angle+1/2*math.pi)
+                    print('------------------------------------\n')
+                    print(str(entity.state.p_vel[0])+'\n')
+                    print(str(entity.state.p_vel[1])+'\n')
+                    print(str(v_angle))
+                    #self.render_geoms_xform[e].set_rotation(-1/2*math.pi)
                 self.render_geoms_xform[e].set_translation(*entity.state.p_pos)
+                
             # render to display or array
             results.append(self.viewers[i].render(return_rgb_array = mode=='rgb_array'))
 
