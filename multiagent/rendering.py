@@ -5,7 +5,6 @@ from __future__ import division
 import os
 import six
 import sys
-import math
 
 if "Apple" in sys.version:
     if 'DYLD_FALLBACK_LIBRARY_PATH' in os.environ:
@@ -70,13 +69,12 @@ class Viewer(object):
     def window_closed_by_user(self):
         self.close()
 
-    def set_bounds(self, left, right, bottom, top,agent_rotation=0):
+    def set_bounds(self, left, right, bottom, top):
         assert right > left and top > bottom
         scalex = self.width/(right-left)
         scaley = self.height/(top-bottom)
         self.transform = Transform(
             translation=(-left*scalex, -bottom*scaley),
-            rotation=agent_rotation,
             scale=(scalex, scaley))
 
     def add_geom(self, geom):
@@ -223,9 +221,6 @@ class Point(Geom):
         glVertex3f(0.0, 0.0, 0.0)
         glEnd()
 
-def make_circle_with_arrow(position,rotation):
-    return PolyLine_with_arrow(position,rotation,True)
-
 class FilledPolygon(Geom):
     def __init__(self, v):
         Geom.__init__(self)
@@ -237,7 +232,7 @@ class FilledPolygon(Geom):
         for p in self.v:
             glVertex3f(p[0], p[1],0)  # draw each vertex
         glEnd()
-        
+
         color = (self._color.vec4[0] * 0.5, self._color.vec4[1] * 0.5, self._color.vec4[2] * 0.5, self._color.vec4[3] * 0.5)
         glColor4f(*color)
         glBegin(GL_LINE_LOOP)
@@ -246,6 +241,16 @@ class FilledPolygon(Geom):
         glEnd()
 
 def make_circle(radius=10, res=30, filled=True):
+    points = []
+    for i in range(res):
+        ang = 2*math.pi*i / res
+        points.append((math.cos(ang)*radius, math.sin(ang)*radius))
+    if filled:
+        return FilledPolygon(points)
+    else:
+        return PolyLine(points, True)
+
+def make_circle_with_arrow(radius=10, res=30, filled=False):
     points = []
     for i in range(res):
         ang = 2*math.pi*i / res
@@ -280,30 +285,6 @@ class Compound(Geom):
     def render1(self):
         for g in self.gs:
             g.render()
-
-class PolyLine_with_arrow(Geom):
-    def __init__(self, arrow_pos,arrow_rotation,close):
-        Geom.__init__(self)
-        self.arrow_pos = arrow_pos
-        self.arrow_rotation = arrow_rotation
-        self.close = close
-        self.linewidth = LineWidth(1)
-        self.add_attr(self.linewidth)
-    def render1(self):
-
-        glColor3f(1.0, 0.0, 0.0)
-        glPushMatrix()
-        glTranslatef(self.arrow_pos[0],self.arrow_pos[1],0)
-        glRotatef(RAD2DEG *self.arrow_rotation, 0, 0, 1.0)
-        glTranslatef(-self.arrow_pos[0],-self.arrow_pos[1],0)
-        glBegin(GL_LINES)
-        glVertex2f(self.arrow_pos[0], self.arrow_pos[1])
-        glVertex2f(self.arrow_pos[0], self.arrow_pos[1]-0.2)
-        glEnd()
-        glPopMatrix()
-        
-    def set_linewidth(self, x):
-        self.linewidth.stroke = x
 
 class PolyLine(Geom):
     def __init__(self, v, close):
